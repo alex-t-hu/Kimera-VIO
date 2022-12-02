@@ -1,7 +1,7 @@
 # Use an official Python runtime as a parent image
 FROM ubuntu:18.04
 
-LABEL maintainer='Antoni Rosinol "arosinol@mit.edu"'
+MAINTAINER Antoni Rosinol "arosinol@mit.edu"
 
 # To avoid tzdata asking for geographic location...
 ENV DEBIAN_frontend noninteractive
@@ -9,7 +9,6 @@ ENV DEBIAN_frontend noninteractive
 # Set the working directory to /root
 ENV DIRPATH /root
 WORKDIR $DIRPATH
-ENV DEBIAN_FRONTEND=noninteractive
 
 #Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends apt-utils
@@ -19,26 +18,11 @@ RUN apt-get update && apt-get install -y git cmake
 RUN apt-get update && apt-get install -y xvfb
 
 # Install GTSAM
-# RUN apt-get update && apt-get install -y libboost-all-dev
-# ADD https://api.github.com/repos/borglab/gtsam/git/refs/heads/master version.json
-# RUN git clone https://github.com/borglab/gtsam.git
-# RUN cd gtsam && \
-#     git fetch && \
-#     mkdir build && \
-#     cd build && \
-#     cmake -DCMAKE_INSTALL_PREFIX=/usr/local -DGTSAM_BUILD_TESTS=OFF -DGTSAM_BUILD_EXAMPLES_ALWAYS=OFF -DCMAKE_BUILD_TYPE=Release -DGTSAM_BUILD_UNSTABLE=ON -DGTSAM_TANGENT_PREINTEGRATION=OFF .. && \
-# #     make -j$(nproc) install
-#       make -j4 install
-# Install GTSAM
 RUN apt-get update && apt-get install -y libboost-all-dev
-# FROM dev-boost as gtsam-code
 ADD https://api.github.com/repos/borglab/gtsam/git/refs/heads/master version.json
 RUN git clone https://github.com/borglab/gtsam.git
 RUN cd gtsam && \
     git fetch && \
-    git reset --hard e5866799dff48239573cdd84964180867e50edd2
-# FROM gtsam-code as gtsam
-RUN cd gtsam && \
     mkdir build && \
     cd build && \
     cmake -DCMAKE_INSTALL_PREFIX=/usr/local -DGTSAM_BUILD_TESTS=OFF -DGTSAM_BUILD_EXAMPLES_ALWAYS=OFF -DCMAKE_BUILD_TYPE=Release -DGTSAM_BUILD_UNSTABLE=ON -DGTSAM_TANGENT_PREINTEGRATION=OFF .. && \
@@ -69,7 +53,7 @@ RUN cd opencv/build && \
       -D BUILD_opencv_python3=OFF \
       -DOPENCV_EXTRA_MODULES_PATH=$DIRPATH/opencv_contrib/modules .. && \
       make -j$(nproc) install
-RUN echo $(nproc)
+
 # Install Open_GV
 RUN git clone https://github.com/laurentkneip/opengv
 RUN cd opengv && \
@@ -104,42 +88,23 @@ RUN apt-get update && \
 # Get python3
 RUN apt-get update && \
     add-apt-repository ppa:deadsnakes/ppa
-# RUN apt-get update && \
-#     apt-get install -y python3.5 python3.5-dev python-pip python3-pip python-tk python3-tk
-# RUN python3.5 -m pip install PyQt5==5.14
 RUN apt-get update && \
-    apt-get install -y python3.9 python3.9-dev python-pip python3-pip  python3.9-distutils 
-RUN python3.9 -m pip install --upgrade pip wheel setuptools requests
-# FROM python3 as python3-ui
-RUN apt-get update && \
-    apt-get install -y python-tk python3-tk qt5-default qtbase5-dev python3-pyqt5 qttools5-dev-tools
-RUN qmake --version
-# RUN python3.9 -m pip install PyQt5==5.15.7
-RUN echo | pip --version
-# RUN brew install pyqt@5
-# RUN python3.9 -m pip install PyQt5
-# FROM python3-ui as evo1
+    apt-get install -y python3.5 python3.5-dev python-pip python3-pip python-tk python3-tk
+RUN python3.5 -m pip install PyQt5==5.14
+
 # Install evo-1 for evaluation
 # Hack to avoid Docker's cache when evo-1 master branch is updated.
 ADD https://api.github.com/repos/ToniRV/evo-1/git/refs/heads/master version.json
 RUN git clone https://github.com/ToniRV/evo-1.git
-RUN cd evo-1 && python3.9 $(which pip3) install .
-
-# Install evo-1 for evaluation
-# Hack to avoid Docker's cache when evo-1 master branch is updated.
-# ADD https://api.github.com/repos/ToniRV/evo-1/git/refs/heads/master version.json
-# RUN git clone https://github.com/ToniRV/evo-1.git
-# RUN cd evo-1 && python3.5 $(which pip3) install .
+RUN cd evo-1 && python3.5 $(which pip3) install .
 
 # Install spark_vio_evaluation
-# RUN python3.5 $(which pip3) install ipython prompt_toolkit
-RUN python3.9 $(which pip3) install ipython prompt_toolkit
+RUN python3.5 $(which pip3) install ipython prompt_toolkit
 # Hack to avoid Docker's cache when spark_vio_evaluation master branch is updated.
 ADD https://api.github.com/repos/ToniRV/Kimera-VIO-Evaluation/git/refs/heads/master version.json
 RUN git clone https://github.com/ToniRV/Kimera-VIO-Evaluation.git
 # We use `pip3 install -e .` so that Jinja2 has access to the webiste template...
-# RUN cd Kimera-VIO-Evaluation && python3.5 $(which pip3) install -e .
-RUN cd Kimera-VIO-Evaluation && python3.9 $(which pip3) install -e .
+RUN cd Kimera-VIO-Evaluation && python3.5 $(which pip3) install -e .
 
 # Add credentials on build
 ARG SSH_PRIVATE_KEY
@@ -156,7 +121,7 @@ RUN apt-get update && apt-get install -y libgflags2.2 libgflags-dev libgoogle-gl
 
 # Install Kimera-VIO
 RUN git clone https://github.com/MIT-SPARK/Kimera-VIO.git
-RUN cd Kimera-VIO && mkdir build && cd build && cmake .. && make -j2
+RUN cd Kimera-VIO && mkdir build && cd build && cmake .. && make -j$(nproc)
 
 # Download and extract EuRoC dataset.
 RUN apt-get update && apt-get install -y wget
@@ -166,7 +131,5 @@ RUN mkdir -p $DIRPATH/euroc && unzip V1_01_easy.zip -d $DIRPATH/euroc
 # Yamelize euroc dataset
 RUN bash $DIRPATH/Kimera-VIO/scripts/euroc/yamelize.bash -p $DIRPATH/euroc
 
-RUN echo "YO"
-
 #CMD xvfb-run $DIRPATH/Kimera-VIO/scripts/stereoVIOEuroc.bash -p $DIRPATH/euroc -r
-# CMD $DIRPATH/Kimera-VIO/scripts/stereoVIOEuroc.bash -p $DIRPATH/euroc -r
+CMD $DIRPATH/Kimera-VIO/scripts/stereoVIOEuroc.bash -p $DIRPATH/euroc -r
